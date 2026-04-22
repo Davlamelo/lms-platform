@@ -1,0 +1,43 @@
+# === Maven ===
+target/
+*.class
+dependency-reduced-pom.xml
+
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# === Eclipse ===
+.project
+.classpath
+.settings/
+bin/
+
+# === VS Code ===
+.vscode/
+
+# === Fichiers OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Logs ===
+*.log
+logs/
+
+# === Fichiers uploads utilisateurs (on ne versionne pas les vidéos/docs) ===
+src/main/webapp/uploads/*
+!src/main/webapp/uploads/.gitkeep
+
+# === Secrets & config locale ===
+*.properties.local
+db.properties.local
+
+# === Fichiers temporaires ===
+*.tmp
+*.bak
+*.swp
+~*

@@ -1,0 +1,282 @@
+@startuml Diagramme_Classes_Technique_MVC_EBC
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+title Diagramme de classes technique (MVC ↔ EBC) - LMS Platform
+
+' ============================================
+' VUE = BOUNDARY (toutes les JSP)
+' ============================================
+package "Vue (View) <<Boundary>>" <<Rectangle>> #E3F2FD {
+
+    class "inscription.jsp" as JSP_Register <<Boundary>>
+    class "login.jsp" as JSP_Login <<Boundary>>
+    class "catalog.jsp" as JSP_Catalog <<Boundary>>
+    class "course-detail.jsp" as JSP_CourseDetail <<Boundary>>
+    class "dashboard.jsp" as JSP_Dashboard <<Boundary>>
+    class "learn.jsp" as JSP_Learn <<Boundary>>
+    class "course-editor.jsp" as JSP_Editor <<Boundary>>
+    class "instructor-dashboard.jsp" as JSP_InstDash <<Boundary>>
+    class "admin-dashboard.jsp" as JSP_AdminDash <<Boundary>>
+}
+
+' ============================================
+' CONTROLLER = CONTROL (Servlets + Filters + Services)
+' ============================================
+package "Contrôleur (Controller) <<Control>>" <<Rectangle>> #FFF3E0 {
+
+    ' --- Servlets (contrôleurs HTTP) ---
+    class RegisterServlet <<Control>> {
+        + doGet(req, resp) : void
+        + doPost(req, resp) : void
+    }
+
+    class LoginServlet <<Control>> {
+        + doGet(req, resp) : void
+        + doPost(req, resp) : void
+    }
+
+    class CatalogServlet <<Control>> {
+        + doGet(req, resp) : void
+    }
+
+    class CourseDetailServlet <<Control>> {
+        + doGet(req, resp) : void
+    }
+
+    class EnrollServlet <<Control>> {
+        + doPost(req, resp) : void
+    }
+
+    class LearnServlet <<Control>> {
+        + doGet(req, resp) : void
+    }
+
+    class SubmitQuizServlet <<Control>> {
+        + doPost(req, resp) : void
+    }
+
+    class CreateCourseServlet <<Control>> {
+        + doGet(req, resp) : void
+        + doPost(req, resp) : void
+    }
+
+    class InstructorDashboardServlet <<Control>> {
+        + doGet(req, resp) : void
+    }
+
+    class AdminDashboardServlet <<Control>> {
+        + doGet(req, resp) : void
+    }
+
+    ' --- Filters ---
+    class AuthFilter <<Control>> {
+        + doFilter(req, resp, chain) : void
+    }
+
+    ' --- Services (logique métier) ---
+    class AuthService <<Control>> {
+        + authentifier(email, mdp) : Utilisateur
+        + inscrire(donnees) : Utilisateur
+        + hasherMotDePasse(mdp) : String
+        + verifierMotDePasse(mdp, hash) : Boolean
+    }
+
+    class CoursService <<Control>> {
+        + rechercherCours(critere) : List<Cours>
+        + publierCours(cours) : void
+        + getCoursById(id) : Cours
+        + getCoursParCategorie(catId) : List<Cours>
+    }
+
+    class InscriptionService <<Control>> {
+        + inscrireApprenant(userId, coursId) : Inscription
+        + existeInscription(userId, coursId) : Boolean
+    }
+
+    class ProgressionService <<Control>> {
+        + marquerLeconCompletee(inscId, leconId) : void
+        + calculerPourcentage(inscId) : double
+    }
+
+    class QuizService <<Control>> {
+        + evaluerQuiz(quizId, reponses) : TentativeQuiz
+    }
+
+    class CertificatService <<Control>> {
+        + genererCertificat(inscId) : Certificat
+        + genererPdf(cert) : File
+    }
+
+    class SectionService <<Control>> {
+        + creerSection(coursId, titre, ordre) : Section
+    }
+
+    class LeconService <<Control>> {
+        + creerLecon(donnees) : Lecon
+    }
+
+    class InstructeurService <<Control>> {
+        + traiterCandidature(candId, decision) : void
+    }
+
+    class AdminService <<Control>> {
+        + modererCours(coursId, decision) : void
+    }
+}
+
+' ============================================
+' MODEL = ENTITY (POJOs + DAO)
+' ============================================
+package "Modèle (Model) <<Entity>>" <<Rectangle>> #E8F5E9 {
+
+    ' --- Interfaces DAO ---
+    interface "UtilisateurDAO" as IUserDAO <<Entity>> {
+        + findById(id) : Optional<Utilisateur>
+        + findByEmail(email) : Optional<Utilisateur>
+        + save(user) : Utilisateur
+        + update(user) : Boolean
+        + delete(id) : Boolean
+    }
+
+    interface "CoursDAO" as ICoursDAO <<Entity>> {
+        + findById(id) : Optional<Cours>
+        + findPublies() : List<Cours>
+        + findByCategorie(catId) : List<Cours>
+        + save(cours) : Cours
+    }
+
+    interface "InscriptionDAO" as IInscDAO <<Entity>> {
+        + findById(id) : Optional<Inscription>
+        + existeInscription(userId, coursId) : Boolean
+        + save(insc) : Inscription
+    }
+
+    ' --- Implémentations DAO ---
+    class UtilisateurDAOImpl <<Entity>> {
+        + findById(id) : Optional<Utilisateur>
+        + findByEmail(email) : Optional<Utilisateur>
+        + save(user) : Utilisateur
+    }
+
+    class CoursDAOImpl <<Entity>> {
+        + findById(id) : Optional<Cours>
+        + findPublies() : List<Cours>
+    }
+
+    class InscriptionDAOImpl <<Entity>> {
+        + findById(id) : Optional<Inscription>
+        + save(insc) : Inscription
+    }
+
+    ' --- POJOs (entités métier) ---
+    class Utilisateur <<Entity>> {
+        - id : Long
+        - email : String
+        - motDePasse : String
+        - prenom : String
+        - nom : String
+        - role : RoleEnum
+    }
+
+    class Cours <<Entity>> {
+        - id : Long
+        - titre : String
+        - statut : StatutCoursEnum
+        - instructeurId : Long
+    }
+
+    class Inscription <<Entity>> {
+        - id : Long
+        - apprenantId : Long
+        - coursId : Long
+        - pourcentageProgression : double
+    }
+
+    class Certificat <<Entity>> {
+        - id : Long
+        - inscriptionId : Long
+        - codeVerification : String
+    }
+
+    ' --- Infrastructure ---
+    class DBConnection <<Entity>> {
+        - {static} instance : DataSource
+        + {static} getInstance() : DataSource
+        + {static} getConnection() : Connection
+    }
+
+    class DAOFactory <<Entity>> {
+        + {static} getUtilisateurDAO() : UtilisateurDAO
+        + {static} getCoursDAO() : CoursDAO
+        + {static} getInscriptionDAO() : InscriptionDAO
+    }
+}
+
+' ============================================
+' RELATIONS
+' ============================================
+
+' === VUE → CONTRÔLEUR (les JSP sont servies par les Servlets) ===
+RegisterServlet ..> JSP_Register : forward
+LoginServlet ..> JSP_Login : forward
+CatalogServlet ..> JSP_Catalog : forward
+CourseDetailServlet ..> JSP_CourseDetail : forward
+LearnServlet ..> JSP_Learn : forward
+CreateCourseServlet ..> JSP_Editor : forward
+InstructorDashboardServlet ..> JSP_InstDash : forward
+AdminDashboardServlet ..> JSP_AdminDash : forward
+EnrollServlet ..> JSP_Dashboard : redirect
+
+' === SERVLETS → SERVICES ===
+RegisterServlet --> AuthService
+LoginServlet --> AuthService
+CatalogServlet --> CoursService
+CourseDetailServlet --> CoursService
+EnrollServlet --> InscriptionService
+EnrollServlet --> CoursService
+LearnServlet --> ProgressionService
+SubmitQuizServlet --> QuizService
+CreateCourseServlet --> CoursService
+CreateCourseServlet --> SectionService
+CreateCourseServlet --> LeconService
+InstructorDashboardServlet --> InstructeurService
+AdminDashboardServlet --> AdminService
+
+AuthFilter --> AuthService
+
+' === SERVICES → INTERFACES DAO ===
+AuthService --> IUserDAO
+CoursService --> ICoursDAO
+InscriptionService --> IInscDAO
+InscriptionService --> ICoursDAO
+ProgressionService --> IInscDAO
+CertificatService --> IInscDAO
+
+' === IMPL → INTERFACE (réalisation) ===
+UtilisateurDAOImpl ..|> IUserDAO
+CoursDAOImpl ..|> ICoursDAO
+InscriptionDAOImpl ..|> IInscDAO
+
+' === IMPL → POJO (manipulent les entités) ===
+UtilisateurDAOImpl ..> Utilisateur : crée
+CoursDAOImpl ..> Cours : crée
+InscriptionDAOImpl ..> Inscription : crée
+
+' === IMPL → DBConnection ===
+UtilisateurDAOImpl --> DBConnection
+CoursDAOImpl --> DBConnection
+InscriptionDAOImpl --> DBConnection
+
+' === Factory → Impl ===
+DAOFactory ..> UtilisateurDAOImpl : instancie
+DAOFactory ..> CoursDAOImpl : instancie
+DAOFactory ..> InscriptionDAOImpl : instancie
+
+' === Services utilisent la Factory ===
+AuthService ..> DAOFactory
+CoursService ..> DAOFactory
+InscriptionService ..> DAOFactory
+
+@enduml

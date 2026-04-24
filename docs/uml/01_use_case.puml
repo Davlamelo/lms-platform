@@ -1,0 +1,113 @@
+@startuml Use_Case_LMS
+!theme plain
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    ArrowColor #555555
+}
+title Diagramme de cas d'utilisation - LMS Platform
+
+left to right direction
+
+actor "Visiteur" as Visiteur
+actor "Apprenant" as Apprenant
+actor "Instructeur" as Instructeur
+actor "Administrateur" as Admin
+
+Apprenant --|> Visiteur
+Instructeur --|> Visiteur
+Admin --|> Visiteur
+
+rectangle "Plateforme LMS" {
+
+    package "Authentification" {
+        usecase "Consulter le catalogue" as UC_Catalogue
+        usecase "Consulter les détails d'un cours" as UC_Details
+        usecase "Rechercher un cours" as UC_Rechercher
+        usecase "S'inscrire sur la plateforme" as UC_SInscrire
+        usecase "Se connecter" as UC_Connecter
+        usecase "Se déconnecter" as UC_Deconnecter
+    }
+
+    package "Apprentissage" {
+        usecase "S'inscrire à un cours" as UC_InscrireCours
+        usecase "Consulter son tableau de bord" as UC_Dashboard
+        usecase "Suivre une leçon" as UC_SuivreLecon
+        usecase "Passer un quiz" as UC_PasserQuiz
+        usecase "Marquer une leçon complétée" as UC_CompleterLecon
+        usecase "Consulter sa progression" as UC_Progression
+        usecase "Télécharger un certificat" as UC_Certificat
+        usecase "Laisser un avis" as UC_Avis
+        usecase "Poser une question (Q&R)" as UC_PoserQuestion
+        usecase "Répondre à une question" as UC_Repondre
+    }
+
+    package "Gestion de cours (Instructeur)" {
+        usecase "Postuler comme instructeur" as UC_Postuler
+        usecase "Créer un cours" as UC_CreerCours
+        usecase "Gérer le curriculum" as UC_GererCurriculum
+        usecase "Créer un quiz" as UC_CreerQuiz
+        usecase "Publier un cours" as UC_Publier
+        usecase "Consulter statistiques cours" as UC_StatsCours
+        usecase "Répondre aux Q&R" as UC_ReponseOfficielle
+    }
+
+    package "Administration" {
+        usecase "Valider candidatures instructeur" as UC_ValiderCandidat
+        usecase "Modérer les cours" as UC_Moderer
+        usecase "Gérer les utilisateurs" as UC_GererUsers
+        usecase "Gérer les catégories" as UC_GererCategories
+        usecase "Consulter statistiques globales" as UC_StatsGlobales
+    }
+}
+
+' ==== Relations Visiteur ====
+Visiteur --> UC_Catalogue
+Visiteur --> UC_Details
+Visiteur --> UC_Rechercher
+Visiteur --> UC_SInscrire
+Visiteur --> UC_Connecter
+
+' ==== Relations Apprenant ====
+Apprenant --> UC_Deconnecter
+Apprenant --> UC_InscrireCours
+Apprenant --> UC_Dashboard
+Apprenant --> UC_SuivreLecon
+Apprenant --> UC_CompleterLecon
+Apprenant --> UC_Progression
+Apprenant --> UC_Certificat
+Apprenant --> UC_Avis
+Apprenant --> UC_PoserQuestion
+Apprenant --> UC_Repondre
+Apprenant --> UC_Postuler
+
+' ==== Relations Instructeur ====
+Instructeur --> UC_CreerCours
+Instructeur --> UC_GererCurriculum
+Instructeur --> UC_CreerQuiz
+Instructeur --> UC_Publier
+Instructeur --> UC_StatsCours
+Instructeur --> UC_ReponseOfficielle
+
+' ==== Relations Admin ====
+Admin --> UC_ValiderCandidat
+Admin --> UC_Moderer
+Admin --> UC_GererUsers
+Admin --> UC_GererCategories
+Admin --> UC_StatsGlobales
+
+' ==== Include : étapes obligatoires ====
+UC_InscrireCours ..> UC_Connecter : <<include>>
+UC_SuivreLecon ..> UC_InscrireCours : <<include>>
+UC_PasserQuiz ..> UC_SuivreLecon : <<include>>
+UC_CompleterLecon ..> UC_SuivreLecon : <<include>>
+UC_CreerQuiz ..> UC_GererCurriculum : <<include>>
+
+' ==== Extend : étapes optionnelles/conditionnelles ====
+UC_Certificat ..> UC_Progression : <<extend>>\n(si 100%)
+UC_Avis ..> UC_SuivreLecon : <<extend>>
+UC_Rechercher ..> UC_Catalogue : <<extend>>
+
+@enduml

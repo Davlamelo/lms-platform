@@ -1,0 +1,266 @@
+@startuml Diagramme_Classes_Metier
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #FFF9C4
+skinparam classBorderColor #F57F17
+skinparam packageStyle rectangle
+
+title Diagramme de classes métier - LMS Platform
+
+' ==== Classes principales ====
+
+class Utilisateur {
+    - id : Long
+    - email : String
+    - motDePasse : String
+    - prenom : String
+    - nom : String
+    - avatarUrl : String
+    - biographie : String
+    - role : RoleEnum
+    - actif : Boolean
+    - dateCreation : LocalDateTime
+    --
+    + seConnecter() : Boolean
+    + sInscrireCours(cours) : Inscription
+    + postulerInstructeur(motivation) : Candidature
+    + getNomComplet() : String
+}
+
+enum RoleEnum {
+    APPRENANT
+    INSTRUCTEUR
+    ADMIN
+}
+
+class CandidatureInstructeur {
+    - id : Long
+    - motivation : String
+    - expertise : String
+    - statut : StatutCandidatureEnum
+    - commentaireAdmin : String
+    - dateSoumission : LocalDateTime
+    - dateTraitement : LocalDateTime
+    --
+    + approuver(commentaire) : void
+    + rejeter(commentaire) : void
+}
+
+enum StatutCandidatureEnum {
+    EN_ATTENTE
+    APPROUVEE
+    REJETEE
+}
+
+class Categorie {
+    - id : Long
+    - nom : String
+    - slug : String
+    - description : String
+    - icone : String
+    --
+    + getNombreCours() : int
+}
+
+class Cours {
+    - id : Long
+    - titre : String
+    - slug : String
+    - descriptionCourte : String
+    - descriptionLongue : String
+    - miniatureUrl : String
+    - videoPromoUrl : String
+    - niveau : NiveauEnum
+    - langue : String
+    - dureeTotaleMin : int
+    - statut : StatutCoursEnum
+    - datePublication : LocalDateTime
+    --
+    + publier() : void
+    + archiver() : void
+    + calculerDureeTotale() : int
+    + getNoteMoyenne() : double
+    + getNombreInscrits() : int
+}
+
+enum NiveauEnum {
+    DEBUTANT
+    INTERMEDIAIRE
+    AVANCE
+}
+
+enum StatutCoursEnum {
+    BROUILLON
+    EN_ATTENTE_VALIDATION
+    PUBLIE
+    REJETE
+    ARCHIVE
+}
+
+class Section {
+    - id : Long
+    - titre : String
+    - description : String
+    - ordre : int
+    --
+    + getDureeTotale() : int
+}
+
+class Lecon {
+    - id : Long
+    - titre : String
+    - typeLecon : TypeLeconEnum
+    - contenuTexte : String
+    - videoUrl : String
+    - ressourceUrl : String
+    - dureeMin : int
+    - ordre : int
+    - estGratuite : Boolean
+}
+
+enum TypeLeconEnum {
+    VIDEO
+    TEXTE
+    QUIZ
+    RESSOURCE
+}
+
+class Quiz {
+    - id : Long
+    - titre : String
+    - description : String
+    - scoreMinimum : int
+    - dureeLimiteMin : int
+    --
+    + calculerScore(reponses) : double
+    + estReussi(score) : Boolean
+}
+
+class Question {
+    - id : Long
+    - enonce : String
+    - typeQuestion : TypeQuestionEnum
+    - points : int
+    - ordre : int
+}
+
+enum TypeQuestionEnum {
+    QCM_UNIQUE
+    QCM_MULTIPLE
+    VRAI_FAUX
+}
+
+class Reponse {
+    - id : Long
+    - texte : String
+    - estCorrecte : Boolean
+    - ordre : int
+}
+
+class Inscription {
+    - id : Long
+    - pourcentageProgression : double
+    - statut : StatutInscriptionEnum
+    - dateInscription : LocalDateTime
+    - dateCompletion : LocalDateTime
+    --
+    + calculerProgression() : double
+    + marquerTerminee() : void
+    + genererCertificat() : Certificat
+}
+
+enum StatutInscriptionEnum {
+    EN_COURS
+    TERMINE
+    ABANDONNE
+}
+
+class ProgressionLecon {
+    - id : Long
+    - estCompletee : Boolean
+    - dateCompletion : LocalDateTime
+    - tempsPasseSec : int
+}
+
+class TentativeQuiz {
+    - id : Long
+    - score : double
+    - pointsObtenus : int
+    - pointsTotal : int
+    - estReussi : Boolean
+    - dateTentative : LocalDateTime
+}
+
+class Avis {
+    - id : Long
+    - note : int
+    - commentaire : String
+    - dateCreation : LocalDateTime
+}
+
+class FilDiscussion {
+    - id : Long
+    - titre : String
+    - contenu : String
+    - estResolu : Boolean
+    - dateCreation : LocalDateTime
+    --
+    + marquerResolu() : void
+}
+
+class MessageDiscussion {
+    - id : Long
+    - contenu : String
+    - estReponseOfficielle : Boolean
+    - dateCreation : LocalDateTime
+}
+
+class Certificat {
+    - id : Long
+    - codeVerification : String
+    - fichierPdfUrl : String
+    - dateEmission : LocalDateTime
+    --
+    + genererPdf() : File
+    + verifier(code) : Boolean
+}
+
+' ==== ASSOCIATIONS ====
+
+Utilisateur "1" -- "*" CandidatureInstructeur : soumet >
+Utilisateur "1" -- "*" Cours : crée >
+Utilisateur "1" -- "*" Inscription : s'inscrit >
+Utilisateur "1" -- "*" Avis : rédige >
+Utilisateur "1" -- "*" FilDiscussion : ouvre >
+Utilisateur "1" -- "*" MessageDiscussion : poste >
+
+Categorie "1" -- "*" Cours : regroupe >
+
+Cours "1" *-- "*" Section : contient >
+Section "1" *-- "*" Lecon : contient >
+Lecon "1" -- "0..1" Quiz : peut avoir >
+Quiz "1" *-- "*" Question : comporte >
+Question "1" *-- "*" Reponse : propose >
+
+Cours "1" -- "*" Inscription : reçoit >
+Cours "1" -- "*" Avis : reçoit >
+Cours "1" -- "*" FilDiscussion : héberge >
+
+Inscription "1" -- "*" ProgressionLecon : trace >
+Inscription "1" -- "*" TentativeQuiz : enregistre >
+Inscription "1" -- "0..1" Certificat : génère >
+
+Lecon "1" -- "*" ProgressionLecon
+Quiz "1" -- "*" TentativeQuiz
+
+FilDiscussion "1" *-- "*" MessageDiscussion : contient >
+
+Utilisateur ..> RoleEnum
+CandidatureInstructeur ..> StatutCandidatureEnum
+Cours ..> NiveauEnum
+Cours ..> StatutCoursEnum
+Lecon ..> TypeLeconEnum
+Question ..> TypeQuestionEnum
+Inscription ..> StatutInscriptionEnum
+
+@enduml

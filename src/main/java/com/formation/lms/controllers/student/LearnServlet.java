@@ -119,17 +119,7 @@ public class LearnServlet extends HttpServlet {
                     req.setAttribute("reponsesParQuestion", reponsesParQuestion);
                 }
             }
-// LOG TEMPORAIRE - à supprimer après debug
-            if (quizActif != null) {
-                List<Question> questions = DAOFactory.getQuestionDAO()
-                        .findByQuizId(quizActif.getId());
-                System.out.println("=== DEBUG QUIZ ===");
-                System.out.println("Nombre de questions : " + questions.size());
-                for (Question q : questions) {
-                    System.out.println("Question : " + q.getEnonce());
-                }
-                // ... reste du code existant
-            }
+
             // Passer les données à la JSP
             req.setAttribute("cours", cours);
             req.setAttribute("inscription", inscription);

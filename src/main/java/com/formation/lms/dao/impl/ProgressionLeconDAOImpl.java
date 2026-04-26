@@ -150,13 +150,31 @@ public class ProgressionLeconDAOImpl implements ProgressionLeconDAO {
 
     @Override
     public boolean marquerCompletee(Long inscriptionId, Long leconId) throws SQLException {
-        String sql = "UPDATE progression_lecons SET est_completee = TRUE, date_completion = NOW() "
-                + "WHERE inscription_id = ? AND lecon_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, inscriptionId);
-            ps.setLong(2, leconId);
-            return ps.executeUpdate() > 0;
+        // D'abord vérifier si la ligne existe
+        Optional<ProgressionLecon> existante = findByInscriptionEtLecon(inscriptionId, leconId);
+
+        if (existante.isPresent()) {
+            // Mettre à jour
+            String sql = "UPDATE progression_lecons SET est_completee = TRUE, " +
+                    "date_completion = NOW() " +
+                    "WHERE inscription_id = ? AND lecon_id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, inscriptionId);
+                ps.setLong(2, leconId);
+                return ps.executeUpdate() > 0;
+            }
+        } else {
+            // Créer la ligne si elle n'existe pas
+            String sql = "INSERT INTO progression_lecons " +
+                    "(inscription_id, lecon_id, est_completee, date_completion) " +
+                    "VALUES (?, ?, TRUE, NOW())";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, inscriptionId);
+                ps.setLong(2, leconId);
+                return ps.executeUpdate() > 0;
+            }
         }
     }
 }

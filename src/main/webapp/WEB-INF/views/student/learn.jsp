@@ -180,6 +180,10 @@
         <a href="${pageContext.request.contextPath}/logout" class="text-muted small">
             <i class="bi bi-box-arrow-right"></i>
         </a>
+        <a href="${pageContext.request.contextPath}/qa?coursId=${cours.id}"
+           class="text-muted small">
+            <i class="bi bi-chat-dots"></i> Q&R
+        </a>
     </div>
 </div>
 

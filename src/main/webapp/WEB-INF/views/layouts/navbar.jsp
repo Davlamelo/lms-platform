@@ -29,6 +29,12 @@
                                 ${sessionScope.utilisateur.prenom}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                    <a class="dropdown-item"
+                                       href="${pageContext.request.contextPath}/profile">
+                                        <i class="bi bi-person-circle"></i> Mon profil
+                                    </a>
+                                </li>
                                 <li><a class="dropdown-item" href="${pageContext.request.contextPath}/dashboard">
                                     <i class="bi bi-speedometer2"></i> Dashboard
                                 </a></li>

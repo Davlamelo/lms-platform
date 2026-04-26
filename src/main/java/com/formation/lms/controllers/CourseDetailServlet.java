@@ -51,6 +51,20 @@ public class CourseDetailServlet extends HttpServlet {
 
             Cours cours = optCours.get();
 
+// Récupérer l'utilisateur connecté
+            Utilisateur utilisateur = (Utilisateur) req.getSession().getAttribute("utilisateur");
+            boolean estAdmin = utilisateur != null && utilisateur.getRole() == Role.ADMIN;
+            boolean estInstructeurProprietaire = utilisateur != null
+                    && utilisateur.getRole() == Role.INSTRUCTEUR
+                    && utilisateur.getId().equals(cours.getInstructeurId());
+
+// Un cours non publié n'est accessible qu'à l'admin et à l'instructeur propriétaire
+            if (cours.getStatut() != StatutCours.PUBLIE && !estAdmin && !estInstructeurProprietaire) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                        "Ce cours n'est pas encore disponible.");
+                return;
+            }
+
             // Récupérer l'instructeur
             Optional<Utilisateur> optInstructeur = utilisateurDAO.findById(cours.getInstructeurId());
             Utilisateur instructeur = optInstructeur.orElse(null);
@@ -71,7 +85,7 @@ public class CourseDetailServlet extends HttpServlet {
 
             // Vérifier si l'utilisateur connecté est inscrit
             boolean estInscrit = false;
-            Utilisateur utilisateur = (Utilisateur) req.getSession().getAttribute("utilisateur");
+            //Utilisateur utilisateur = (Utilisateur) req.getSession().getAttribute("utilisateur");
             if (utilisateur != null) {
                 estInscrit = inscriptionService.estInscrit(utilisateur.getId(), cours.getId());
             }

@@ -104,6 +104,16 @@ public class LearnServlet extends HttpServlet {
                 }
             }
 
+
+
+            // Passer les données à la JSP
+            req.setAttribute("cours", cours);
+            req.setAttribute("inscription", inscription);
+            req.setAttribute("sections", sections);
+            req.setAttribute("leconsParSection", leconsParSection);
+            req.setAttribute("leconsCompletees", leconsCompletees);
+            req.setAttribute("leconActive", leconActive);
+            req.setAttribute("quizActif", quizActif);
             // Si leçon de type QUIZ → charger le quiz
             if (leconActive != null && leconActive.getTypeLecon() == TypeLecon.QUIZ) {
                 quizActif = quizDAO.findByLeconId(leconActive.getId()).orElse(null);
@@ -119,15 +129,32 @@ public class LearnServlet extends HttpServlet {
                     req.setAttribute("reponsesParQuestion", reponsesParQuestion);
                 }
             }
+            // Préparer l'URL vidéo embed si c'est une vidéo YouTube/Vimeo
+            if (leconActive != null && leconActive.getTypeLecon() == TypeLecon.VIDEO
+                    && leconActive.getVideoUrl() != null) {
 
-            // Passer les données à la JSP
-            req.setAttribute("cours", cours);
-            req.setAttribute("inscription", inscription);
-            req.setAttribute("sections", sections);
-            req.setAttribute("leconsParSection", leconsParSection);
-            req.setAttribute("leconsCompletees", leconsCompletees);
-            req.setAttribute("leconActive", leconActive);
-            req.setAttribute("quizActif", quizActif);
+                String url = leconActive.getVideoUrl();
+                String embedUrl = null;
+
+                if (url.contains("youtube.com") || url.contains("youtu.be")) {
+                    // Extraire l'ID YouTube
+                    String videoId = null;
+                    if (url.contains("v=")) {
+                        videoId = url.split("v=")[1].split("&")[0];
+                    } else if (url.contains("youtu.be/")) {
+                        videoId = url.split("youtu.be/")[1].split("\\?")[0];
+                    }
+                    if (videoId != null) {
+                        embedUrl = "https://www.youtube.com/embed/" + videoId;
+                    }
+                } else if (url.contains("vimeo.com")) {
+                    String[] parts = url.split("/");
+                    String vimeoId = parts[parts.length - 1].split("\\?")[0];
+                    embedUrl = "https://player.vimeo.com/video/" + vimeoId;
+                }
+
+                req.setAttribute("embedUrl", embedUrl);
+            }
 
         } catch (Exception e) {
             req.setAttribute("erreur", "Erreur lors du chargement du cours.");

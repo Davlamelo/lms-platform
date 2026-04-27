@@ -223,14 +223,130 @@
                             <c:when test="${estCompletee}">
                                 <i class="bi bi-check-circle-fill text-success"></i>
                             </c:when>
-                            <c:when test="${lecon.typeLecon == 'VIDEO'}">
-                                <i class="bi bi-play-circle"></i>
+                            <%-- Leçon de type VIDEO --%>
+                            <%-- Leçon de type VIDEO --%>
+                            <c:when test="${leconActive.typeLecon == 'VIDEO'}">
+                                <div class="content-card">
+                                    <h2>${leconActive.titre}</h2>
+                                    <c:choose>
+                                        <%-- YouTube ou Vimeo (iframe) --%>
+                                        <c:when test="${not empty embedUrl}">
+                                            <div class="ratio ratio-16x9 mb-4 rounded overflow-hidden">
+                                                <iframe src="${embedUrl}"
+                                                        title="${leconActive.titre}"
+                                                        allowfullscreen
+                                                        allow="accelerometer; autoplay; clipboard-write;
+                                                               encrypted-media; gyroscope; picture-in-picture">
+                                                </iframe>
+                                            </div>
+                                        </c:when>
+                                        <%-- Fichier vidéo direct (MP4) --%>
+                                        <c:when test="${not empty leconActive.videoUrl}">
+                                            <video controls class="w-100 rounded mb-4"
+                                                   style="max-height: 450px; background: #000;">
+                                                <source src="${leconActive.videoUrl}" type="video/mp4">
+                                                Votre navigateur ne supporte pas la lecture vidéo.
+                                            </video>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <div class="alert alert-secondary">
+                                                <i class="bi bi-camera-video-off"></i> Vidéo non disponible.
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
+
+                                    <div class="nav-buttons">
+                                        <div></div>
+                                        <c:choose>
+                                            <c:when test="${leconsCompletees.contains(leconActive.id)}">
+                                                <button class="btn-complete deja-complete" disabled>
+                                                    <i class="bi bi-check-circle-fill"></i> Leçon complétée
+                                                </button>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <form method="post"
+                                                      action="${pageContext.request.contextPath}/student/complete-lesson">
+                                                    <input type="hidden" name="inscriptionId"
+                                                           value="${inscription.id}">
+                                                    <input type="hidden" name="leconId"
+                                                           value="${leconActive.id}">
+                                                    <input type="hidden" name="coursId"
+                                                           value="${cours.id}">
+                                                    <button type="submit" class="btn-complete">
+                                                        <i class="bi bi-check-circle"></i>
+                                                        Marquer comme complétée
+                                                    </button>
+                                                </form>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                </div>
                             </c:when>
                             <c:when test="${lecon.typeLecon == 'QUIZ'}">
                                 <i class="bi bi-question-circle"></i>
                             </c:when>
-                            <c:when test="${lecon.typeLecon == 'RESSOURCE'}">
-                                <i class="bi bi-file-earmark"></i>
+                            <%-- Leçon de type RESSOURCE --%>
+                            <c:when test="${leconActive.typeLecon == 'RESSOURCE'}">
+                                <div class="content-card">
+                                    <h2>${leconActive.titre}</h2>
+                                    <c:choose>
+                                        <c:when test="${not empty leconActive.ressourceUrl}">
+                                            <c:choose>
+                                                <%-- Fichier PDF uploadé localement --%>
+                                                <c:when test="${leconActive.ressourceUrl.startsWith('uploads/')}">
+                                                    <div class="text-center py-4">
+                                                        <i class="bi bi-file-pdf text-danger"
+                                                           style="font-size: 5rem;"></i>
+                                                        <p class="mt-3">Document PDF disponible</p>
+                                                        <a href="${pageContext.request.contextPath}/${leconActive.ressourceUrl}"
+                                                           class="btn btn-danger btn-lg" target="_blank">
+                                                            <i class="bi bi-eye"></i> Voir le PDF
+                                                        </a>
+                                                        <a href="${pageContext.request.contextPath}/${leconActive.ressourceUrl}"
+                                                           class="btn btn-outline-danger btn-lg ms-2" download>
+                                                            <i class="bi bi-download"></i> Télécharger
+                                                        </a>
+                                                    </div>
+                                                </c:when>
+                                                <%-- URL externe --%>
+                                                <c:otherwise>
+                                                    <a href="${leconActive.ressourceUrl}"
+                                                       class="btn btn-primary" target="_blank">
+                                                        <i class="bi bi-box-arrow-up-right"></i>
+                                                        Accéder à la ressource
+                                                    </a>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <div class="alert alert-secondary">
+                                                <i class="bi bi-file-earmark-x"></i> Ressource non disponible.
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
+
+                                    <div class="nav-buttons">
+                                        <div></div>
+                                        <c:choose>
+                                            <c:when test="${leconsCompletees.contains(leconActive.id)}">
+                                                <button class="btn-complete deja-complete" disabled>
+                                                    <i class="bi bi-check-circle-fill"></i> Leçon complétée
+                                                </button>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <form method="post"
+                                                      action="${pageContext.request.contextPath}/student/complete-lesson">
+                                                    <input type="hidden" name="inscriptionId" value="${inscription.id}">
+                                                    <input type="hidden" name="leconId" value="${leconActive.id}">
+                                                    <input type="hidden" name="coursId" value="${cours.id}">
+                                                    <button type="submit" class="btn-complete">
+                                                        <i class="bi bi-check-circle"></i> Marquer comme complétée
+                                                    </button>
+                                                </form>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                </div>
                             </c:when>
                             <c:otherwise>
                                 <i class="bi bi-file-text"></i>

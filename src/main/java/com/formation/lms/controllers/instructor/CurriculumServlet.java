@@ -14,6 +14,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +72,9 @@ public class CurriculumServlet extends HttpServlet {
                         instructeurService.getLecons(section.getId()));
             }
 
+            // Catégories pour le modal d'édition du cours
+            req.setAttribute("categories", DAOFactory.getCategorieDAO().findAll());
+
             req.setAttribute("cours", cours);
             req.setAttribute("sections", sections);
             req.setAttribute("leconsParSection", leconsParSection);
@@ -99,7 +104,6 @@ public class CurriculumServlet extends HttpServlet {
         String action = req.getParameter("action");
         String coursIdStr = req.getParameter("coursId");
 
-        // Sécurité : coursId obligatoire
         if (coursIdStr == null || coursIdStr.trim().isEmpty()) {
             resp.sendRedirect(req.getContextPath() + "/instructor/dashboard");
             return;
@@ -115,14 +119,14 @@ public class CurriculumServlet extends HttpServlet {
                     if (titreSection == null || titreSection.trim().isEmpty()) {
                         resp.sendRedirect(req.getContextPath() +
                                 "/instructor/course/curriculum?coursId=" + coursId +
-                                "&erreur=Le+titre+de+la+section+est+obligatoire");
+                                "&erreur=" + enc("Le titre de la section est obligatoire"));
                         return;
                     }
                     instructeurService.ajouterSection(
                             coursId, titreSection, utilisateur.getId());
                     resp.sendRedirect(req.getContextPath() +
                             "/instructor/course/curriculum?coursId=" + coursId +
-                            "&succes=Section+ajoutée+avec+succès");
+                            "&succes=" + enc("Section ajoutée avec succès"));
                 }
 
                 case "ajouterLecon" -> {
@@ -163,11 +167,12 @@ public class CurriculumServlet extends HttpServlet {
                         }
                     }
 
+                    // MODIFIÉ : ajout de coursId pour le recalcul automatique de la durée
                     instructeurService.ajouterLecon(
-                            sectionId, titreLecon, type, contenu, duree);
+                            sectionId, titreLecon, type, contenu, duree, coursId);
                     resp.sendRedirect(req.getContextPath() +
                             "/instructor/course/curriculum?coursId=" + coursId +
-                            "&succes=Leçon+ajoutée+avec+succès");
+                            "&succes=" + enc("Leçon ajoutée avec succès"));
                 }
 
                 case "modifierLecon" -> {
@@ -189,12 +194,10 @@ public class CurriculumServlet extends HttpServlet {
                     lecon.setDureeMin(duree);
                     lecon.setEstGratuite(estGratuite);
 
-                    // Réinitialiser tous les champs de contenu
                     lecon.setContenuTexte(null);
                     lecon.setVideoUrl(null);
                     lecon.setRessourceUrl(null);
 
-                    // Mettre le bon champ selon le type
                     switch (typeStr) {
                         case "VIDEO" -> lecon.setVideoUrl(
                                 contenu != null ? contenu.trim() : null);
@@ -205,32 +208,99 @@ public class CurriculumServlet extends HttpServlet {
                     }
 
                     DAOFactory.getLeconDAO().update(lecon);
+
+                    // AJOUTÉ : recalcul de la durée après modification de leçon
+                    instructeurService.recalculerDureeCours(coursId);
+
                     resp.sendRedirect(req.getContextPath() +
                             "/instructor/course/curriculum?coursId=" + coursId +
-                            "&succes=Leçon+modifiée+avec+succès");
+                            "&succes=" + enc("Leçon modifiée avec succès"));
                 }
 
                 case "supprimerSection" -> {
                     Long sectionId = Long.parseLong(req.getParameter("sectionId"));
                     instructeurService.supprimerSection(sectionId);
+                    // AJOUTÉ : recalcul de la durée après suppression de section
+                    instructeurService.recalculerDureeCours(coursId);
                     resp.sendRedirect(req.getContextPath() +
                             "/instructor/course/curriculum?coursId=" + coursId +
-                            "&succes=Section+supprimée");
+                            "&succes=" + enc("Section supprimée"));
                 }
 
                 case "supprimerLecon" -> {
                     Long leconId = Long.parseLong(req.getParameter("leconId"));
-                    instructeurService.supprimerLecon(leconId);
+                    // MODIFIÉ : ajout de coursId pour le recalcul automatique de la durée
+                    instructeurService.supprimerLecon(leconId, coursId);
                     resp.sendRedirect(req.getContextPath() +
                             "/instructor/course/curriculum?coursId=" + coursId +
-                            "&succes=Leçon+supprimée");
+                            "&succes=" + enc("Leçon supprimée"));
                 }
 
                 case "soumettre" -> {
                     instructeurService.soumettrePourValidation(
                             coursId, utilisateur.getId());
                     resp.sendRedirect(req.getContextPath() +
-                            "/instructor/dashboard?succes=Cours+soumis+pour+validation");
+                            "/instructor/dashboard?succes=" +
+                            enc("Cours soumis pour validation"));
+                }
+
+                case "modifierCours" -> {
+                    Cours cours = DAOFactory.getCoursDAO().findById(coursId)
+                            .orElseThrow(() -> new Exception("Cours introuvable"));
+
+                    if (!cours.getInstructeurId().equals(utilisateur.getId())) {
+                        resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                        return;
+                    }
+
+                    String titre = req.getParameter("titre");
+                    String descriptionCourte = req.getParameter("descriptionCourte");
+                    String descriptionLongue = req.getParameter("descriptionLongue");
+                    String niveauStr = req.getParameter("niveau");
+                    String categorieIdStr = req.getParameter("categorieId");
+
+                    if (titre != null && !titre.trim().isEmpty()) {
+                        cours.setTitre(titre.trim());
+                    }
+                    if (descriptionCourte != null) {
+                        cours.setDescriptionCourte(descriptionCourte.trim());
+                    }
+                    if (descriptionLongue != null) {
+                        cours.setDescriptionLongue(descriptionLongue.trim());
+                    }
+                    if (niveauStr != null) {
+                        cours.setNiveau(NiveauCours.valueOf(niveauStr));
+                    }
+                    if (categorieIdStr != null && !categorieIdStr.isEmpty()) {
+                        cours.setCategorieId(Long.parseLong(categorieIdStr));
+                    }
+
+                    String cheminRacine = getServletContext().getRealPath("/");
+                    Part partMiniature = req.getPart("miniature");
+                    if (partMiniature != null && partMiniature.getSize() > 0) {
+                        try {
+                            if (cours.getMiniatureUrl() != null
+                                    && !cours.getMiniatureUrl().startsWith("http")) {
+                                FileUploadUtil.supprimerFichier(
+                                        cheminRacine, cours.getMiniatureUrl());
+                            }
+                            String cheminMiniature = FileUploadUtil.sauvegarderFichier(
+                                    partMiniature, cheminRacine, "uploads/miniatures/");
+                            if (cheminMiniature != null) {
+                                cours.setMiniatureUrl(cheminMiniature);
+                            }
+                        } catch (IllegalArgumentException e) {
+                            resp.sendRedirect(req.getContextPath() +
+                                    "/instructor/course/curriculum?coursId=" + coursId +
+                                    "&erreur=" + enc("Miniature invalide : " + e.getMessage()));
+                            return;
+                        }
+                    }
+
+                    DAOFactory.getCoursDAO().update(cours);
+                    resp.sendRedirect(req.getContextPath() +
+                            "/instructor/course/curriculum?coursId=" + coursId +
+                            "&succes=" + enc("Cours modifié avec succès"));
                 }
 
                 default -> resp.sendRedirect(req.getContextPath() +
@@ -240,12 +310,16 @@ public class CurriculumServlet extends HttpServlet {
         } catch (IllegalStateException e) {
             resp.sendRedirect(req.getContextPath() +
                     "/instructor/course/curriculum?coursId=" + coursId +
-                    "&erreur=" + e.getMessage());
+                    "&erreur=" + enc(e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
             resp.sendRedirect(req.getContextPath() +
                     "/instructor/course/curriculum?coursId=" + coursId +
-                    "&erreur=Erreur+technique");
+                    "&erreur=" + enc("Erreur technique"));
         }
+    }
+
+    private String enc(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

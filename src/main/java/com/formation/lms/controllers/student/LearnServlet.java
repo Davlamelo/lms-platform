@@ -1,9 +1,8 @@
 package com.formation.lms.controllers.student;
 
 import com.formation.lms.dao.factory.DAOFactory;
-import com.formation.lms.dao.interfaces.QuizDAO;
+import com.formation.lms.dao.interfaces.*;
 import com.formation.lms.models.*;
-import com.formation.lms.services.CoursService;
 import com.formation.lms.services.InscriptionService;
 
 import jakarta.servlet.ServletException;
@@ -18,163 +17,165 @@ import java.util.*;
 @WebServlet("/student/learn")
 public class LearnServlet extends HttpServlet {
 
-    private CoursService coursService;
     private InscriptionService inscriptionService;
-    private QuizDAO quizDAO;
 
     @Override
     public void init() throws ServletException {
-        this.coursService = new CoursService();
         this.inscriptionService = new InscriptionService();
-        this.quizDAO = DAOFactory.getQuizDAO();
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        Utilisateur utilisateur = (Utilisateur) req.getSession().getAttribute("utilisateur");
+        Utilisateur utilisateur = (Utilisateur) req.getSession()
+                .getAttribute("utilisateur");
+
         String coursIdStr = req.getParameter("coursId");
+        String leconIdStr = req.getParameter("leconId");
 
         if (coursIdStr == null) {
-            resp.sendRedirect(req.getContextPath() + "/catalog");
+            resp.sendRedirect(req.getContextPath() + "/student/dashboard");
             return;
         }
 
         try {
             Long coursId = Long.parseLong(coursIdStr);
 
-            // Vérifier que l'apprenant est bien inscrit
-            if (!inscriptionService.estInscrit(utilisateur.getId(), coursId)) {
-                resp.sendRedirect(req.getContextPath() + "/course?slug=" +
-                        coursService.getCoursById(coursId)
-                                .map(Cours::getSlug).orElse(""));
-                return;
-            }
-
-            // Récupérer le cours
-            Optional<Cours> optCours = coursService.getCoursById(coursId);
-            if (optCours.isEmpty()) {
+            // === 1. Récupérer le cours ===
+            Cours cours = DAOFactory.getCoursDAO().findById(coursId).orElse(null);
+            if (cours == null) {
                 resp.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
-            Cours cours = optCours.get();
 
-            // Récupérer l'inscription
-            Optional<Inscription> optInscription = inscriptionService
-                    .getInscription(utilisateur.getId(), coursId);
-            if (optInscription.isEmpty()) {
-                resp.sendRedirect(req.getContextPath() + "/catalog");
+            // === 2. Vérifier l'inscription ===
+            Inscription inscription = inscriptionService
+                    .getInscription(utilisateur.getId(), coursId).orElse(null);
+            if (inscription == null) {
+                resp.sendRedirect(req.getContextPath() +
+                        "/course?slug=" + cours.getSlug());
                 return;
             }
-            Inscription inscription = optInscription.get();
 
-            // Récupérer les sections et leçons
-            List<Section> sections = coursService.getSections(coursId);
+            // === 3. Récupérer les sections et leçons ===
+            List<Section> sections = DAOFactory.getSectionDAO()
+                    .findByCoursId(coursId);
             Map<Long, List<Lecon>> leconsParSection = new LinkedHashMap<>();
+            List<Lecon> toutesLecons = new ArrayList<>();
+
             for (Section section : sections) {
-                leconsParSection.put(section.getId(), coursService.getLecons(section.getId()));
+                List<Lecon> lecons = DAOFactory.getLeconDAO()
+                        .findBySectionId(section.getId());
+                leconsParSection.put(section.getId(), lecons);
+                toutesLecons.addAll(lecons);
             }
 
-            // Récupérer la progression
-            List<ProgressionLecon> progressions = inscriptionService
-                    .getProgression(inscription.getId());
+            // === 4. Déterminer la leçon active ===
+            Lecon leconActive = null;
+
+            if (leconIdStr != null && !leconIdStr.isEmpty()) {
+                Long leconId = Long.parseLong(leconIdStr);
+                leconActive = DAOFactory.getLeconDAO()
+                        .findById(leconId).orElse(null);
+            }
+
+            // Si aucune leçon sélectionnée → prendre la première
+            if (leconActive == null && !toutesLecons.isEmpty()) {
+                leconActive = toutesLecons.get(0);
+            }
+
+            // === 5. Récupérer les leçons complétées ===
             Set<Long> leconsCompletees = new HashSet<>();
+            List<ProgressionLecon> progressions = DAOFactory
+                    .getProgressionLeconDAO()
+                    .findByInscriptionId(inscription.getId());
             for (ProgressionLecon p : progressions) {
                 if (p.isEstCompletee()) {
                     leconsCompletees.add(p.getLeconId());
                 }
             }
 
-            // Déterminer la leçon active
-            String leconIdStr = req.getParameter("leconId");
-            Lecon leconActive = null;
+            // === 6. Préparer le contenu selon le type de leçon ===
             Quiz quizActif = null;
+            List<Question> questions = new ArrayList<>();
+            Map<Long, List<Reponse>> reponsesParQuestion = new LinkedHashMap<>();
+            String embedUrl = null;
+            boolean estVideoDirecte = false;
 
-            if (leconIdStr != null) {
-                Long leconId = Long.parseLong(leconIdStr);
-                leconActive = trouverLecon(leconsParSection, leconId);
-            }
+            if (leconActive != null) {
 
-            // Si pas de leçon spécifiée → première leçon
-            if (leconActive == null && !sections.isEmpty()) {
-                List<Lecon> premieresLecons = leconsParSection.get(sections.get(0).getId());
-                if (premieresLecons != null && !premieresLecons.isEmpty()) {
-                    leconActive = premieresLecons.get(0);
+                // --- Cas QUIZ ---
+                if (leconActive.getTypeLecon() == TypeLecon.QUIZ) {
+                    quizActif = DAOFactory.getQuizDAO()
+                            .findByLeconId(leconActive.getId()).orElse(null);
+
+                    if (quizActif != null) {
+                        questions = DAOFactory.getQuestionDAO()
+                                .findByQuizId(quizActif.getId());
+                        for (Question q : questions) {
+                            reponsesParQuestion.put(q.getId(),
+                                    DAOFactory.getReponseDAO()
+                                            .findByQuestionId(q.getId()));
+                        }
+                    }
+                }
+
+                // --- Cas VIDEO (ou leçon avec videoUrl) ---
+                String videoUrl = leconActive.getVideoUrl();
+                if (videoUrl != null && !videoUrl.trim().isEmpty()) {
+                    videoUrl = videoUrl.trim();
+
+                    if (videoUrl.contains("youtube.com")
+                            || videoUrl.contains("youtu.be")) {
+                        // Extraire l'ID YouTube
+                        String videoId = null;
+                        if (videoUrl.contains("v=")) {
+                            videoId = videoUrl.split("v=")[1].split("&")[0];
+                        } else if (videoUrl.contains("youtu.be/")) {
+                            videoId = videoUrl.split("youtu.be/")[1]
+                                    .split("\\?")[0];
+                        }
+                        if (videoId != null && !videoId.isEmpty()) {
+                            embedUrl = "https://www.youtube.com/embed/"
+                                    + videoId;
+                        }
+
+                    } else if (videoUrl.contains("vimeo.com")) {
+                        String[] parts = videoUrl.split("/");
+                        String vimeoId = parts[parts.length - 1]
+                                .split("\\?")[0];
+                        embedUrl = "https://player.vimeo.com/video/" + vimeoId;
+
+                    } else if (videoUrl.endsWith(".mp4")
+                            || videoUrl.endsWith(".webm")
+                            || videoUrl.endsWith(".ogg")) {
+                        estVideoDirecte = true;
+                    }
+                    // Sinon : URL non reconnue → les deux flags restent false/null
                 }
             }
 
-
-
-            // Passer les données à la JSP
+            // === 7. Passer les attributs à la JSP ===
             req.setAttribute("cours", cours);
             req.setAttribute("inscription", inscription);
             req.setAttribute("sections", sections);
             req.setAttribute("leconsParSection", leconsParSection);
-            req.setAttribute("leconsCompletees", leconsCompletees);
+            req.setAttribute("toutesLecons", toutesLecons);
             req.setAttribute("leconActive", leconActive);
+            req.setAttribute("leconsCompletees", leconsCompletees);
             req.setAttribute("quizActif", quizActif);
-            // Si leçon de type QUIZ → charger le quiz
-            if (leconActive != null && leconActive.getTypeLecon() == TypeLecon.QUIZ) {
-                quizActif = quizDAO.findByLeconId(leconActive.getId()).orElse(null);
-                if (quizActif != null) {
-                    List<Question> questions = DAOFactory.getQuestionDAO()
-                            .findByQuizId(quizActif.getId());
-                    Map<Long, List<Reponse>> reponsesParQuestion = new LinkedHashMap<>();
-                    for (Question q : questions) {
-                        reponsesParQuestion.put(q.getId(),
-                                DAOFactory.getReponseDAO().findByQuestionId(q.getId()));
-                    }
-                    req.setAttribute("questions", questions);
-                    req.setAttribute("reponsesParQuestion", reponsesParQuestion);
-                }
-            }
-            // Préparer l'URL vidéo embed si c'est une vidéo YouTube/Vimeo
-            if (leconActive != null && leconActive.getTypeLecon() == TypeLecon.VIDEO
-                    && leconActive.getVideoUrl() != null) {
-
-                String url = leconActive.getVideoUrl();
-                String embedUrl = null;
-
-                if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                    // Extraire l'ID YouTube
-                    String videoId = null;
-                    if (url.contains("v=")) {
-                        videoId = url.split("v=")[1].split("&")[0];
-                    } else if (url.contains("youtu.be/")) {
-                        videoId = url.split("youtu.be/")[1].split("\\?")[0];
-                    }
-                    if (videoId != null) {
-                        embedUrl = "https://www.youtube.com/embed/" + videoId;
-                    }
-                } else if (url.contains("vimeo.com")) {
-                    String[] parts = url.split("/");
-                    String vimeoId = parts[parts.length - 1].split("\\?")[0];
-                    embedUrl = "https://player.vimeo.com/video/" + vimeoId;
-                }
-
-                req.setAttribute("embedUrl", embedUrl);
-            }
+            req.setAttribute("questions", questions);
+            req.setAttribute("reponsesParQuestion", reponsesParQuestion);
+            req.setAttribute("embedUrl", embedUrl);
+            req.setAttribute("estVideoDirecte", estVideoDirecte);
 
         } catch (Exception e) {
-            req.setAttribute("erreur", "Erreur lors du chargement du cours.");
             e.printStackTrace();
+            req.setAttribute("erreur", "Erreur lors du chargement du cours.");
         }
 
-        req.getRequestDispatcher("/WEB-INF/views/student/learn.jsp").forward(req, resp);
-    }
-
-    /**
-     * Trouve une leçon dans la map par son ID.
-     */
-    private Lecon trouverLecon(Map<Long, List<Lecon>> leconsParSection, Long leconId) {
-        for (List<Lecon> lecons : leconsParSection.values()) {
-            for (Lecon lecon : lecons) {
-                if (lecon.getId().equals(leconId)) {
-                    return lecon;
-                }
-            }
-        }
-        return null;
+        req.getRequestDispatcher("/WEB-INF/views/student/learn.jsp")
+                .forward(req, resp);
     }
 }

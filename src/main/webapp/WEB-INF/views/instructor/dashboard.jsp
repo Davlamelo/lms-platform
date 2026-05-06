@@ -29,6 +29,14 @@
         </div>
     </c:if>
 
+    <!-- AJOUTÉ : Message erreur -->
+    <c:if test="${not empty param.erreur}">
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-circle"></i> ${param.erreur}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </c:if>
+
     <!-- Statistiques globales -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
@@ -148,18 +156,54 @@
                                     <i class="bi bi-book text-info"></i>
                                     ${statsParCours[c.id].nbLecons}
                                 </td>
+
+                                <%-- MODIFIÉ : colonne Actions avec retirer et supprimer --%>
                                 <td>
-                                    <a href="${pageContext.request.contextPath}/instructor/course/curriculum?coursId=${c.id}"
-                                       class="btn btn-sm btn-outline-primary me-1">
-                                        <i class="bi bi-pencil"></i> Éditer
-                                    </a>
-                                    <c:if test="${c.statut == 'PUBLIE'}">
-                                        <a href="${pageContext.request.contextPath}/course?slug=${c.slug}"
-                                           class="btn btn-sm btn-outline-success">
-                                            <i class="bi bi-eye"></i> Voir
+                                    <div class="d-flex gap-1 flex-wrap">
+
+                                        <%-- Bouton Éditer (toujours visible) --%>
+                                        <a href="${pageContext.request.contextPath}/instructor/course/curriculum?coursId=${c.id}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i> Éditer
                                         </a>
-                                    </c:if>
+
+                                        <%-- Bouton Voir (si publié) --%>
+                                        <c:if test="${c.statut == 'PUBLIE'}">
+                                            <a href="${pageContext.request.contextPath}/course?slug=${c.slug}"
+                                               class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-eye"></i> Voir
+                                            </a>
+                                        </c:if>
+
+                                        <%-- AJOUTÉ : Bouton Retirer (si publié) --%>
+                                        <c:if test="${c.statut == 'PUBLIE'}">
+                                            <form method="post"
+                                                  action="${pageContext.request.contextPath}/instructor/dashboard"
+                                                  onsubmit="return confirm('Retirer ce cours du catalogue ? Il repassera en brouillon.')">
+                                                <input type="hidden" name="action" value="retirer">
+                                                <input type="hidden" name="coursId" value="${c.id}">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                    <i class="bi bi-arrow-down-circle"></i> Retirer
+                                                </button>
+                                            </form>
+                                        </c:if>
+
+                                        <%-- AJOUTÉ : Bouton Supprimer (si brouillon ou rejeté) --%>
+                                        <c:if test="${c.statut == 'BROUILLON' || c.statut == 'REJETE'}">
+                                            <form method="post"
+                                                  action="${pageContext.request.contextPath}/instructor/dashboard"
+                                                  onsubmit="return confirm('Supprimer définitivement ce cours ? Cette action est irréversible.')">
+                                                <input type="hidden" name="action" value="supprimer">
+                                                <input type="hidden" name="coursId" value="${c.id}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i> Supprimer
+                                                </button>
+                                            </form>
+                                        </c:if>
+
+                                    </div>
                                 </td>
+
                             </tr>
                         </c:forEach>
                     </tbody>

@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -127,9 +128,15 @@
                 <c:forEach var="unCours" items="${cours}">
                     <div class="col-lg-4 col-md-6">
                         <div class="card h-100 border-0 shadow-sm card-cours">
-                            <!-- Miniature ou couleur par défaut -->
-                            <%-- Miniature : image réelle ou couleur par défaut --%>
+
+                            <%-- MODIFIÉ : Miniature avec support URL absolue (http/https) et chemin local --%>
                             <c:choose>
+                                <c:when test="${not empty unCours.miniatureUrl && fn:startsWith(unCours.miniatureUrl, 'http')}">
+                                    <img src="${unCours.miniatureUrl}"
+                                         alt="${unCours.titre}"
+                                         class="card-img-top"
+                                         style="height: 140px; object-fit: cover;">
+                                </c:when>
                                 <c:when test="${not empty unCours.miniatureUrl}">
                                     <img src="${pageContext.request.contextPath}/${unCours.miniatureUrl}"
                                          alt="${unCours.titre}"

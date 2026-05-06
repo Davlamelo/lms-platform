@@ -102,7 +102,6 @@ public class InstructeurService {
             throw new IllegalArgumentException("La catégorie est obligatoire.");
         }
 
-        // Générer le slug depuis le titre
         String slug = genererSlug(titre);
 
         Cours cours = new Cours(titre.trim(), slug, descriptionCourte, niveau,
@@ -131,12 +130,10 @@ public class InstructeurService {
 
         Cours cours = optCours.get();
 
-        // Vérifier que le cours appartient bien à cet instructeur
         if (!cours.getInstructeurId().equals(instructeurId)) {
             throw new SecurityException("Vous n'êtes pas l'instructeur de ce cours.");
         }
 
-        // Vérifier qu'il y a au moins une section
         long nbSections = sectionDAO.countByCoursId(coursId);
         if (nbSections == 0) {
             throw new IllegalStateException("Ajoutez au moins une section avant de soumettre.");
@@ -153,10 +150,8 @@ public class InstructeurService {
     public Section ajouterSection(Long coursId, String titre, Long instructeurId)
             throws SQLException {
 
-        // Vérifier que le cours appartient à l'instructeur
         verifierProprietaire(coursId, instructeurId);
 
-        // Calculer l'ordre (après la dernière section)
         long nbSections = sectionDAO.countByCoursId(coursId);
         int ordre = (int) nbSections + 1;
 
@@ -181,12 +176,12 @@ public class InstructeurService {
     // === Gestion des leçons ===
 
     /**
-     * Ajoute une leçon à une section.
+     * Ajoute une leçon à une section et recalcule la durée du cours.
+     * MODIFIÉ : ajout du paramètre coursId pour le recalcul automatique.
      */
     public Lecon ajouterLecon(Long sectionId, String titre, TypeLecon typeLecon,
-                              String contenu, int dureeMin) throws SQLException {
+                              String contenu, int dureeMin, Long coursId) throws SQLException {
 
-        // Calculer l'ordre
         List<Lecon> lecons = leconDAO.findBySectionId(sectionId);
         int ordre = lecons.size() + 1;
 
@@ -201,7 +196,12 @@ public class InstructeurService {
             lecon.setRessourceUrl(contenu);
         }
 
-        return leconDAO.save(lecon);
+        Lecon leconSauvee = leconDAO.save(lecon);
+
+        // AJOUTÉ : recalcul automatique de la durée totale du cours
+        recalculerDureeCours(coursId);
+
+        return leconSauvee;
     }
 
     /**
@@ -212,10 +212,37 @@ public class InstructeurService {
     }
 
     /**
-     * Supprime une leçon.
+     * Supprime une leçon et recalcule la durée du cours.
+     * MODIFIÉ : ajout du paramètre coursId pour le recalcul automatique.
      */
-    public boolean supprimerLecon(Long leconId) throws SQLException {
-        return leconDAO.delete(leconId);
+    public boolean supprimerLecon(Long leconId, Long coursId) throws SQLException {
+        boolean result = leconDAO.delete(leconId);
+
+        // AJOUTÉ : recalcul automatique de la durée totale du cours
+        recalculerDureeCours(coursId);
+
+        return result;
+    }
+
+    // === Durée ===
+
+    /**
+     * Recalcule et met à jour la durée totale d'un cours
+     * en additionnant les durées de toutes ses leçons.
+     * À appeler après chaque ajout, modification ou suppression de leçon.
+     */
+    public void recalculerDureeCours(Long coursId) throws SQLException {
+        List<Section> sections = sectionDAO.findByCoursId(coursId);
+        int total = 0;
+        for (Section section : sections) {
+            for (Lecon lecon : leconDAO.findBySectionId(section.getId())) {
+                total += lecon.getDureeMin();
+            }
+        }
+        Cours cours = coursDAO.findById(coursId)
+                .orElseThrow(() -> new IllegalArgumentException("Cours introuvable."));
+        cours.setDureeTotaleMin(total);
+        coursDAO.update(cours);
     }
 
     // === Utilitaires ===
@@ -250,7 +277,6 @@ public class InstructeurService {
                 .replaceAll("-+", "-")
                 .trim();
 
-        // Garantir l'unicité du slug
         String slugFinal = slug;
         int compteur = 1;
         while (coursDAO.findBySlug(slugFinal).isPresent()) {

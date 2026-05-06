@@ -23,13 +23,23 @@
             <ul class="navbar-nav">
                 <c:choose>
                     <c:when test="${not empty sessionScope.utilisateur}">
+
+                        <%-- AJOUTÉ : lien Devenir instructeur visible uniquement pour les APPRENANTS --%>
+                        <c:if test="${sessionScope.utilisateur.role == 'APPRENANT'}">
+                            <li class="nav-item">
+                                <a class="nav-link" href="${pageContext.request.contextPath}/become-instructor">
+                                    <i class="bi bi-person-video3"></i> Devenir instructeur
+                                </a>
+                            </li>
+                        </c:if>
+
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-circle"></i>
                                 ${sessionScope.utilisateur.prenom}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
+                                <li>
                                     <a class="dropdown-item"
                                        href="${pageContext.request.contextPath}/profile">
                                         <i class="bi bi-person-circle"></i> Mon profil
@@ -38,6 +48,18 @@
                                 <li><a class="dropdown-item" href="${pageContext.request.contextPath}/dashboard">
                                     <i class="bi bi-speedometer2"></i> Dashboard
                                 </a></li>
+
+                                <%-- AJOUTÉ : lien Devenir instructeur aussi dans le dropdown pour les APPRENANTS --%>
+                                <c:if test="${sessionScope.utilisateur.role == 'APPRENANT'}">
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                           href="${pageContext.request.contextPath}/become-instructor">
+                                            <i class="bi bi-person-video3"></i> Devenir instructeur
+                                        </a>
+                                    </li>
+                                </c:if>
+
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="${pageContext.request.contextPath}/logout">
                                     <i class="bi bi-box-arrow-right"></i> Déconnexion

@@ -18,6 +18,7 @@ public class CandidatureInstructeurDAOImpl implements CandidatureInstructeurDAO 
         cand.setUtilisateurId(rs.getLong("utilisateur_id"));
         cand.setMotivation(rs.getString("motivation"));
         cand.setExpertise(rs.getString("expertise"));
+        cand.setCvUrl(rs.getString("cv_url"));          // AJOUTÉ
         cand.setStatut(StatutCandidature.valueOf(rs.getString("statut")));
         cand.setCommentaireAdmin(rs.getString("commentaire_admin"));
         cand.setDateSoumission(rs.getTimestamp("date_soumission").toLocalDateTime());
@@ -55,14 +56,17 @@ public class CandidatureInstructeurDAOImpl implements CandidatureInstructeurDAO 
 
     @Override
     public CandidatureInstructeur save(CandidatureInstructeur cand) throws SQLException {
-        String sql = "INSERT INTO candidatures_instructeur (utilisateur_id, motivation, expertise, statut) "
-                + "VALUES (?, ?, ?, ?)";
+        // MODIFIÉ : ajout de cv_url dans l'INSERT
+        String sql = "INSERT INTO candidatures_instructeur "
+                + "(utilisateur_id, motivation, expertise, cv_url, statut) "
+                + "VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, cand.getUtilisateurId());
             ps.setString(2, cand.getMotivation());
             ps.setString(3, cand.getExpertise());
-            ps.setString(4, cand.getStatut().name());
+            ps.setString(4, cand.getCvUrl());           // AJOUTÉ
+            ps.setString(5, cand.getStatut().name());
             ps.executeUpdate();
             try (ResultSet cles = ps.getGeneratedKeys()) {
                 if (cles.next()) cand.setId(cles.getLong(1));
@@ -73,20 +77,22 @@ public class CandidatureInstructeurDAOImpl implements CandidatureInstructeurDAO 
 
     @Override
     public boolean update(CandidatureInstructeur cand) throws SQLException {
+        // MODIFIÉ : ajout de cv_url dans l'UPDATE
         String sql = "UPDATE candidatures_instructeur SET motivation = ?, expertise = ?, "
-                + "statut = ?, commentaire_admin = ?, date_traitement = ? WHERE id = ?";
+                + "cv_url = ?, statut = ?, commentaire_admin = ?, date_traitement = ? WHERE id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, cand.getMotivation());
             ps.setString(2, cand.getExpertise());
-            ps.setString(3, cand.getStatut().name());
-            ps.setString(4, cand.getCommentaireAdmin());
+            ps.setString(3, cand.getCvUrl());           // AJOUTÉ
+            ps.setString(4, cand.getStatut().name());
+            ps.setString(5, cand.getCommentaireAdmin());
             if (cand.getDateTraitement() != null) {
-                ps.setTimestamp(5, Timestamp.valueOf(cand.getDateTraitement()));
+                ps.setTimestamp(6, Timestamp.valueOf(cand.getDateTraitement()));
             } else {
-                ps.setNull(5, Types.TIMESTAMP);
+                ps.setNull(6, Types.TIMESTAMP);
             }
-            ps.setLong(6, cand.getId());
+            ps.setLong(7, cand.getId());
             return ps.executeUpdate() > 0;
         }
     }

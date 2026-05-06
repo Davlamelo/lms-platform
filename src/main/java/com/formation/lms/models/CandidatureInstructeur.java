@@ -12,6 +12,7 @@ public class CandidatureInstructeur {
     private Long utilisateurId;
     private String motivation;
     private String expertise;
+    private String cvUrl;           // AJOUTÉ : chemin vers le fichier CV/portfolio uploadé
     private StatutCandidature statut;
     private String commentaireAdmin;
     private LocalDateTime dateSoumission;
@@ -58,6 +59,15 @@ public class CandidatureInstructeur {
 
     public void setExpertise(String expertise) {
         this.expertise = expertise;
+    }
+
+    // AJOUTÉ
+    public String getCvUrl() {
+        return cvUrl;
+    }
+
+    public void setCvUrl(String cvUrl) {
+        this.cvUrl = cvUrl;
     }
 
     public StatutCandidature getStatut() {

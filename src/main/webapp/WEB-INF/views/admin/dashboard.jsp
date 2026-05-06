@@ -107,20 +107,28 @@
                 </div>
             </a>
         </div>
+
+        <%-- AJOUTÉ : carte navigation candidatures instructeur --%>
         <div class="col-md-3">
-            <a href="${pageContext.request.contextPath}/catalog"
+            <a href="${pageContext.request.contextPath}/admin/candidatures"
                class="card border-0 shadow-sm text-decoration-none h-100">
                 <div class="card-body text-center py-4">
-                    <i class="bi bi-eye fs-1 text-secondary"></i>
-                    <h6 class="mt-2 text-dark">Voir le catalogue</h6>
+                    <i class="bi bi-person-video3 fs-1 text-purple" style="color: #5a2d82;"></i>
+                    <h6 class="mt-2 text-dark">Candidatures instructeur</h6>
+                    <c:if test="${not empty candidaturesEnAttente}">
+                        <span class="badge bg-warning text-dark">
+                            ${candidaturesEnAttente.size()} en attente
+                        </span>
+                    </c:if>
                 </div>
             </a>
         </div>
+
     </div>
 
     <!-- Cours en attente de validation -->
     <c:if test="${not empty coursEnAttente}">
-        <div class="card border-0 shadow-sm border-start border-warning border-4">
+        <div class="card border-0 shadow-sm border-start border-warning border-4 mb-4">
             <div class="card-body">
                 <h5 class="card-title">
                     <i class="bi bi-clock text-warning"></i>
@@ -184,6 +192,62 @@
             <i class="bi bi-check-circle"></i> Aucun cours en attente de validation. 🎉
         </div>
     </c:if>
+
+    <%-- AJOUTÉ : bloc candidatures instructeur en attente (aperçu rapide) --%>
+    <c:if test="${not empty candidaturesEnAttente}">
+        <div class="card border-0 shadow-sm border-start border-4 mt-4"
+             style="border-color: #5a2d82 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-video3" style="color: #5a2d82;"></i>
+                        Candidatures instructeur en attente (${candidaturesEnAttente.size()})
+                    </h5>
+                    <a href="${pageContext.request.contextPath}/admin/candidatures?statut=EN_ATTENTE"
+                       class="btn btn-sm btn-outline-secondary">
+                        Voir toutes <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Candidat</th>
+                                <th>Expertise</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="cand" items="${candidaturesEnAttente}">
+                                <c:set var="candidat" value="${candidats[cand.utilisateurId]}"/>
+                                <tr>
+                                    <td>
+                                        <strong>${candidat.prenom} ${candidat.nom}</strong>
+                                        <br>
+                                        <small class="text-muted">${candidat.email}</small>
+                                    </td>
+                                    <td>
+                                        <small>${cand.expertise}</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">${cand.dateSoumission}</small>
+                                    </td>
+                                    <td>
+                                        <a href="${pageContext.request.contextPath}/admin/candidatures"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Examiner
+                                        </a>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </c:if>
+
 </div>
 
 <jsp:include page="/WEB-INF/views/layouts/footer.jsp"/>

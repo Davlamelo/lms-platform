@@ -2,6 +2,7 @@ package com.formation.lms.controllers;
 
 import com.formation.lms.dao.factory.DAOFactory;
 import com.formation.lms.dao.interfaces.UtilisateurDAO;
+import com.formation.lms.models.CandidatureInstructeur;
 import com.formation.lms.models.Utilisateur;
 import com.formation.lms.utils.FileUploadUtil;
 import com.formation.lms.utils.PasswordUtil;
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Gère la consultation et modification du profil utilisateur.
@@ -51,6 +53,17 @@ public class ProfileServlet extends HttpServlet {
             Utilisateur frais = utilisateurDAO.findById(utilisateur.getId())
                     .orElse(utilisateur);
             req.setAttribute("profil", frais);
+
+            // AJOUTÉ : charger la dernière candidature pour les APPRENANTS
+            // (utilisée dans la sidebar de profile.jsp)
+            if (frais.getRole().name().equals("APPRENANT")) {
+                List<CandidatureInstructeur> candidatures = DAOFactory
+                        .getCandidatureInstructeurDAO()
+                        .findByUtilisateurId(frais.getId());
+                if (!candidatures.isEmpty()) {
+                    req.setAttribute("derniereCandidature", candidatures.get(0));
+                }
+            }
 
             // Messages
             if (req.getParameter("succes") != null) {

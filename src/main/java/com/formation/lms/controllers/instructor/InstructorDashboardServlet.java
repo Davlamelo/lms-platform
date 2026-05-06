@@ -2,6 +2,7 @@ package com.formation.lms.controllers.instructor;
 
 import com.formation.lms.dao.factory.DAOFactory;
 import com.formation.lms.models.Cours;
+import com.formation.lms.models.StatutCours;
 import com.formation.lms.models.Utilisateur;
 import com.formation.lms.services.InstructeurService;
 
@@ -12,9 +13,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @WebServlet("/instructor/dashboard")
 public class InstructorDashboardServlet extends HttpServlet {
@@ -61,5 +65,67 @@ public class InstructorDashboardServlet extends HttpServlet {
         }
 
         req.getRequestDispatcher("/WEB-INF/views/instructor/dashboard.jsp").forward(req, resp);
+    }
+
+    // AJOUTÉ : gestion des actions retirer et supprimer
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        Utilisateur utilisateur = (Utilisateur) req.getSession().getAttribute("utilisateur");
+        String action = req.getParameter("action");
+        String coursIdStr = req.getParameter("coursId");
+
+        if (coursIdStr == null || coursIdStr.trim().isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/instructor/dashboard");
+            return;
+        }
+
+        Long coursId = Long.parseLong(coursIdStr);
+
+        try {
+            Optional<Cours> optCours = DAOFactory.getCoursDAO().findById(coursId);
+            if (optCours.isEmpty()) {
+                resp.sendRedirect(req.getContextPath() + "/instructor/dashboard?erreur="
+                        + enc("Cours introuvable"));
+                return;
+            }
+
+            Cours cours = optCours.get();
+
+            // Vérification que l'instructeur est bien le propriétaire
+            if (!cours.getInstructeurId().equals(utilisateur.getId())) {
+                resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
+            switch (action != null ? action : "") {
+
+                case "retirer" -> {
+                    // Repasse le cours en BROUILLON (retire du catalogue)
+                    DAOFactory.getCoursDAO().updateStatut(coursId, StatutCours.BROUILLON);
+                    resp.sendRedirect(req.getContextPath() + "/instructor/dashboard?succes="
+                            + enc("Cours retiré du catalogue avec succès"));
+                }
+
+                case "supprimer" -> {
+                    // Suppression définitive
+                    DAOFactory.getCoursDAO().delete(coursId);
+                    resp.sendRedirect(req.getContextPath() + "/instructor/dashboard?succes="
+                            + enc("Cours supprimé définitivement"));
+                }
+
+                default -> resp.sendRedirect(req.getContextPath() + "/instructor/dashboard");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            resp.sendRedirect(req.getContextPath() + "/instructor/dashboard?erreur="
+                    + enc("Erreur technique"));
+        }
+    }
+
+    private String enc(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

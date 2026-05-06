@@ -23,7 +23,11 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-            <form method="post" action="${pageContext.request.contextPath}/instructor/course/create">
+
+            <%-- MODIFIÉ : ajout de enctype="multipart/form-data" pour l'upload de miniature --%>
+            <form method="post"
+                  action="${pageContext.request.contextPath}/instructor/course/create"
+                  enctype="multipart/form-data">
 
                 <div class="mb-3">
                     <label for="titre" class="form-label fw-bold">Titre du cours *</label>
@@ -73,6 +77,21 @@
                     </div>
                 </div>
 
+                <%-- AJOUTÉ : champ upload miniature avec aperçu --%>
+                <div class="mb-3">
+                    <label for="miniature" class="form-label fw-bold">Miniature du cours</label>
+                    <input type="file" class="form-control" id="miniature"
+                           name="miniature" accept="image/jpeg,image/png,image/webp,image/gif">
+                    <div class="form-text">
+                        Format JPG, PNG, WEBP ou GIF — max 5 Mo.
+                        Si absent, un fond violet sera affiché par défaut.
+                    </div>
+                    <div class="mt-2" id="previewMiniature" style="display: none;">
+                        <img id="imgPreview" src="" alt="Aperçu miniature"
+                             style="height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6;">
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <a href="${pageContext.request.contextPath}/instructor/dashboard"
                        class="btn btn-outline-secondary">Annuler</a>
@@ -84,5 +103,17 @@
         </div>
     </div>
 </div>
+
+<%-- AJOUTÉ : script d'aperçu de la miniature avant upload --%>
+<script>
+    document.getElementById('miniature').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const preview = document.getElementById('previewMiniature');
+        const img = document.getElementById('imgPreview');
+        img.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+    });
+</script>
 
 <jsp:include page="/WEB-INF/views/layouts/footer.jsp"/>

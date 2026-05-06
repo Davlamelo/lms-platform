@@ -86,7 +86,7 @@ public class DBConnection {
     public static void fermerPool() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            System.out.println("🔒 Pool de connexions fermé.");
+            System.out.println(" Pool de connexions fermé.");
         }
     }
 

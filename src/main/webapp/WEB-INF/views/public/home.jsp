@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -113,8 +114,14 @@
                 <div class="col-lg-4 col-md-6">
                     <div class="card h-100 border-0 shadow-sm card-cours">
 
-                        <%-- Miniature : image réelle ou couleur par défaut --%>
+                        <%-- MODIFIÉ : Miniature avec support URL absolue (http/https) et chemin local --%>
                         <c:choose>
+                            <c:when test="${not empty cours.miniatureUrl && fn:startsWith(cours.miniatureUrl, 'http')}">
+                                <img src="${cours.miniatureUrl}"
+                                     alt="${cours.titre}"
+                                     class="card-img-top"
+                                     style="height: 160px; object-fit: cover;">
+                            </c:when>
                             <c:when test="${not empty cours.miniatureUrl}">
                                 <img src="${pageContext.request.contextPath}/${cours.miniatureUrl}"
                                      alt="${cours.titre}"

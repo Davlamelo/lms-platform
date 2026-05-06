@@ -408,7 +408,7 @@
             </div>
 
             <!-- Statut du cours -->
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <h6 class="fw-bold">Statut du cours</h6>
                     <c:choose>
@@ -447,9 +447,150 @@
                     </a>
                 </div>
             </div>
+
+            <!-- AJOUTÉ : Carte modifier les infos du cours -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold">
+                        <i class="bi bi-pencil-square"></i> Modifier le cours
+                    </h6>
+
+                    <%-- Aperçu miniature actuelle --%>
+                    <c:choose>
+                        <c:when test="${not empty cours.miniatureUrl}">
+                            <img src="${pageContext.request.contextPath}/${cours.miniatureUrl}"
+                                 alt="Miniature actuelle"
+                                 class="img-fluid rounded mb-3"
+                                 style="height: 100px; width: 100%; object-fit: cover;">
+                        </c:when>
+                        <c:otherwise>
+                            <div class="rounded mb-3 d-flex align-items-center
+                                        justify-content-center"
+                                 style="height: 100px;
+                                        background: linear-gradient(135deg, #5a2d82, #8e44ad);">
+                                <i class="bi bi-image text-white" style="font-size: 2rem;"></i>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalModifierCours">
+                        <i class="bi bi-pencil"></i> Modifier les informations
+                    </button>
+                </div>
+            </div>
+            <!-- Fin carte modifier cours -->
+
         </div>
     </div>
 </div>
+
+<!-- AJOUTÉ : Modal modification du cours (titre, description, niveau, catégorie, miniature) -->
+<div class="modal fade" id="modalModifierCours" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-pencil-square"></i> Modifier le cours
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post"
+                  action="${pageContext.request.contextPath}/instructor/course/curriculum"
+                  enctype="multipart/form-data">
+                <input type="hidden" name="action" value="modifierCours">
+                <input type="hidden" name="coursId" value="${cours.id}">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Titre *</label>
+                        <input type="text" class="form-control" name="titre"
+                               value="${cours.titre}" required maxlength="200">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description courte *</label>
+                        <input type="text" class="form-control" name="descriptionCourte"
+                               value="${cours.descriptionCourte}" required maxlength="500">
+                        <div class="form-text">Affiché dans le catalogue (max 500 caractères)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description complète</label>
+                        <textarea class="form-control" name="descriptionLongue"
+                                  rows="5">${cours.descriptionLongue}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Catégorie *</label>
+                            <select class="form-select" name="categorieId" required>
+                                <c:forEach var="cat" items="${categories}">
+                                    <option value="${cat.id}"
+                                            ${cours.categorieId == cat.id ? 'selected' : ''}>
+                                        ${cat.nom}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Niveau *</label>
+                            <select class="form-select" name="niveau" required>
+                                <option value="DEBUTANT"
+                                        ${cours.niveau == 'DEBUTANT' ? 'selected' : ''}>
+                                    Débutant
+                                </option>
+                                <option value="INTERMEDIAIRE"
+                                        ${cours.niveau == 'INTERMEDIAIRE' ? 'selected' : ''}>
+                                    Intermédiaire
+                                </option>
+                                <option value="AVANCE"
+                                        ${cours.niveau == 'AVANCE' ? 'selected' : ''}>
+                                    Avancé
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Miniature
+                            <c:if test="${not empty cours.miniatureUrl}">
+                                <span class="text-muted fw-normal small">
+                                    (laisser vide pour conserver l'actuelle)
+                                </span>
+                            </c:if>
+                        </label>
+                        <input type="file" class="form-control" name="miniature"
+                               id="miniatureModal"
+                               accept="image/jpeg,image/png,image/webp,image/gif">
+                        <div class="form-text">Format JPG, PNG, WEBP ou GIF — max 5 Mo.</div>
+
+                        <%-- Aperçu avant upload --%>
+                        <div class="mt-2" id="previewMiniatureModal" style="display: none;">
+                            <img id="imgPreviewModal" src="" alt="Aperçu"
+                                 style="height: 100px; object-fit: cover;
+                                        border-radius: 8px; border: 1px solid #dee2e6;
+                                        width: 100%;">
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Fin modal modifier cours -->
 
 <!-- Script gestion dynamique du formulaire -->
 <script>
@@ -483,6 +624,16 @@ function toggleContenu(select, sectionId) {
             textarea.required = false;
     }
 }
+
+// AJOUTÉ : aperçu miniature dans le modal
+document.getElementById('miniatureModal').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const preview = document.getElementById('previewMiniatureModal');
+    const img = document.getElementById('imgPreviewModal');
+    img.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+});
 </script>
 
 <jsp:include page="/WEB-INF/views/layouts/footer.jsp"/>
